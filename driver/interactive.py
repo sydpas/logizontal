@@ -10,6 +10,7 @@ import pandas as pd
 from PIL import Image
 
 from matplotlib.backends.backend_qtagg import (
+    NavigationToolbar2QT as NavigationToolbar,
     FigureCanvasQTAgg as FigureCanvas
     )
 
@@ -229,38 +230,51 @@ class MainWindow(QMainWindow):
 
         print('adding file button to menu...')
         # for the file menu
+        file_menu = self.menuBar().addMenu('Files')
         open_file = QAction('Open LAS file', self)
         open_horz = QAction('Open Well file', self)
         open_file.triggered.connect(self.load_file)
         open_horz.triggered.connect(self.load_file)
-        file_menu = self.menuBar().addMenu('Files')
         file_menu.addAction(open_file)
         file_menu.addAction(open_horz)
 
         print('going to well log plotter...')
         self.well_plot = WellLogPlotter()
 
-        # # for the tops
-        # self.toggle_button = QToolButton()
-        # self.toggle_button.setText('Toggle Tops')
-        # self.toggle_button.clicked.connect(self.well_plot.toggle_tops)
-        # self.toggle_button.setAutoRaise(False)
-        # # styling the button
-        # self.toggle_button.setStyleSheet("""
-        # QToolButton {background-color: #d00000; color: white; font: bold 12px; border: 2px white; border-radius: 4px;
-        #     padding: 4px;
-        # }
-        #
-        # QToolButton:hover {background-color: #9d0208; color: white; font: bold 12px; border: 2px white;
-        #     border-radius: 4px; padding: 4px;
-        # }
-        # """)
-
         layout = QVBoxLayout()
         layout.setSpacing(2)
         layout.setContentsMargins(10,10,10,10)
 
-        # layout.addWidget(self.toggle_button)
+        self.toolbar = NavigationToolbar(self.well_plot, self)
+        layout.addWidget(self.toolbar)
+
+        self.toggle_button = QToolButton()
+        self.toggle_button.setText('Toggle Tops')
+        self.toggle_button.setCheckable(True)
+        self.toggle_button.setChecked(True)  # default state is "on"
+        self.toggle_button.clicked.connect(self.well_plot.toggle_tops)
+        self.toggle_button.setStyleSheet("""
+            QToolButton {
+                background-color: #a21112;
+                border: 1px solid #e40b0b;
+                border-radius: 4px;
+                padding: 4px;
+                font-weight: bold;
+                color: white;
+            }
+            QToolButton:checked {
+                background-color: #a21112;
+                border: 1px solid #e40b0b;
+            }
+            QToolButton:hover {
+                background-color: #e40b0b;
+                border: 1px solid #a21112;
+            }
+        """)
+
+        # add it to the toolbar
+        self.toolbar.addWidget(self.toggle_button)
+
         layout.addWidget(self.well_plot)
 
         # 'wrap' everything
