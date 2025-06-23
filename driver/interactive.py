@@ -26,6 +26,11 @@ class WellLogPlotter(FigureCanvas):
         self.fig, self.axes = plt.subplots(1, 1)
         super().__init__(self.fig)
 
+        print('clearing plots...')
+        self.fig.clear()  # clear any default plots
+        self.axes = self.fig.add_subplot(111)
+        self.axes.axis('off')
+
         print('loading data...')
         self.df = None
         self.well_tops_list = None
@@ -39,12 +44,9 @@ class WellLogPlotter(FigureCanvas):
         self.tops_lines_list = []  # empty list to fill with tops
 
 
-        # plotting horizontal well
-        self.plot_horizontal_well()
-
-    def title_box(self, file_path):
+    def title_box(self, file_path, horz_path):
         columns, non_depth_curves, curve_unit_list, df, loc, comp, kb = logsection(file_path)
-        horz_df = horz_loader()
+        horz_df = horz_loader(horz_path)
 
         uwi_title = horz_df['UWI'][0]
         title_text = f'Horizontal Well ({uwi_title}) on {loc} for {comp}\n+{kb:.2f} m'
@@ -67,7 +69,6 @@ class WellLogPlotter(FigureCanvas):
         well_tops_list = top_load(file_path)
         ax_list, col_list = organize_curves(file_path)
 
-        self.fig.clear()
         self.axes = self.fig.subplots(1, len(ax_list), sharey = True,
                                       gridspec_kw={'width_ratios': [1, 2, 1, 2, 2]})
         self.fig.subplots_adjust(bottom=0.15)  # increase margins to prevent overlap
@@ -98,11 +99,10 @@ class WellLogPlotter(FigureCanvas):
             ax2.tick_params(axis='x', which='both', bottom=False, top=True, labelbottom=False, labeltop=True,
                             labelsize=6)
 
-            # take away y just to use the horz ss well
-            ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False, labelright=False)
+            ax.tick_params(axis='y', which='both', left=True, right=False, labelleft=True, labelright=False,
+                           labelsize=8)
             ax2.tick_params(axis='y', which='both', left=False, right=False, labelleft=False, labelright=False)
-            ax.set_ylabel('')
-            ax2.set_ylabel('')
+            ax.set_ylabel('Subsea (m)', color='black', labelpad=10, size=8)
 
             for j, curve in enumerate(curves):
                 unit = curve_unit_list.get(curve, '')
@@ -164,15 +164,14 @@ class WellLogPlotter(FigureCanvas):
             pair.set_visible(self.show_tops)
         self.draw()
 
-
-    def plot_horizontal_well(self):
+    def plot_horizontal_well(self, horz_path):
         """
         This function creates a horizontal well overlay on top of the previous well logs.
         """
-        horz_df = horz_loader()
+        horz_df = horz_loader(horz_path)
 
         # create an overlay axis, will have to fix width and height
-        self.horz_well_axes = self.fig.add_axes((0.125, 0.109, 0.774, 0.77), sharey=self.axes)  # l b width height
+        self.horz_well_axes = self.fig.add_axes((0.125, 0.109, 0.774, 0.77), sharey=self.axes[0])  # l b width height
         self.horz_well_axes.set_navigate(False)
 
         # make transparent background
@@ -216,6 +215,10 @@ class WellLogPlotter(FigureCanvas):
 
         self.horz_well_axes.legend(loc='upper right', fontsize=7)
 
+        print('re-drawing well...')
+        self.draw()
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -227,28 +230,31 @@ class MainWindow(QMainWindow):
         print('adding file button to menu...')
         # for the file menu
         open_file = QAction('Open LAS file', self)
-        open_file.triggered.connect(self.load_las_file)
+        open_horz = QAction('Open Well file', self)
+        open_file.triggered.connect(self.load_file)
+        open_horz.triggered.connect(self.load_file)
         file_menu = self.menuBar().addMenu('Files')
         file_menu.addAction(open_file)
+        file_menu.addAction(open_horz)
 
         print('going to well log plotter...')
         self.well_plot = WellLogPlotter()
 
-        # for the tops
-        self.toggle_button = QToolButton()
-        self.toggle_button.setText('Toggle Tops')
-        self.toggle_button.clicked.connect(self.well_plot.toggle_tops)
-        self.toggle_button.setAutoRaise(False)
-        # styling the button
-        self.toggle_button.setStyleSheet("""
-        QToolButton {background-color: #d00000; color: white; font: bold 12px; border: 2px white; border-radius: 4px;
-            padding: 4px;
-        }
-
-        QToolButton:hover {background-color: #9d0208; color: white; font: bold 12px; border: 2px white; 
-            border-radius: 4px; padding: 4px;
-        }
-        """)
+        # # for the tops
+        # self.toggle_button = QToolButton()
+        # self.toggle_button.setText('Toggle Tops')
+        # self.toggle_button.clicked.connect(self.well_plot.toggle_tops)
+        # self.toggle_button.setAutoRaise(False)
+        # # styling the button
+        # self.toggle_button.setStyleSheet("""
+        # QToolButton {background-color: #d00000; color: white; font: bold 12px; border: 2px white; border-radius: 4px;
+        #     padding: 4px;
+        # }
+        #
+        # QToolButton:hover {background-color: #9d0208; color: white; font: bold 12px; border: 2px white;
+        #     border-radius: 4px; padding: 4px;
+        # }
+        # """)
 
         layout = QVBoxLayout()
         layout.setSpacing(2)
@@ -263,20 +269,28 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(container)
 
 
-    def load_las_file(self):
-        print('loading las file...')
+    def load_file(self, horz_path):
+        print('loading file...')
         dialog = QFileDialog(self)
-        dialog.setFileMode(QFileDialog.AnyFile)
-        dialog.setNameFilter('LAS (*.las)')
+        dialog.setFileMode(QFileDialog.ExistingFiles)
+
         if dialog.exec():  # if user clicks okay
-            fileName = dialog.selectedFiles() # grabs file
-            print(f'chose file {fileName}...')
-            for file in fileName:
-                self.well_plot.plotting_logs(file)
-                print(f'plotting file {file}...')
-                print('applying title...')
-                # self.title_box = TitleBox(file)
-                print('title was applied!')
+            files = dialog.selectedFiles() # grabs file
+            las_file, csv_file = None, None
+            for f in files:
+                if f.lower().endswith('.las'):
+                    las_file = f
+                elif f.lower().endswith('.csv'):
+                    csv_file = f
+
+            if las_file:
+                self.well_plot.plotting_logs(las_file)
+                print(f'plotting las file: {las_file}')
+            elif csv_file:
+                self.well_plot.plot_horizontal_well(csv_file)
+                print(f'plotted csv file: {csv_file}')
+
+            self.well_plot.draw()
 
 
 def main():
