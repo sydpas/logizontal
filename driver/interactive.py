@@ -15,7 +15,7 @@ from matplotlib.backends.backend_qtagg import (
     )
 
 from PySide6.QtWidgets import (
-    QMainWindow, QVBoxLayout, QWidget, QApplication, QToolButton, QFileDialog, QInputDialog
+    QMainWindow, QVBoxLayout, QWidget, QApplication, QToolButton, QFileDialog, QInputDialog, QPushButton
 )
 
 
@@ -79,6 +79,8 @@ class WellLogPlotter(FigureCanvas):
         curve_counter = 0
 
         for i, (curves, ax) in enumerate(zip(ax_list, self.axes)):  # zip pairs up elements from 2 lists and brings them together
+            if not curves:
+                continue  # skip if curves empty
             ax = self.axes[i]
             top = well_tops_list[0]
 
@@ -156,7 +158,7 @@ class WellLogPlotter(FigureCanvas):
             ax.yaxis.grid(True, which='both', linestyle='-', alpha=0.5, linewidth=0.5)
             ax.xaxis.grid(True, which='both', linestyle='-', alpha=0.5, linewidth=0.5)
 
-        print('re-drawing logs...')
+        print('re-drawing logs [finished plotting_logs()]...')
         self.draw()
 
     def toggle_tops(self):
@@ -165,6 +167,10 @@ class WellLogPlotter(FigureCanvas):
             pair.set_visible(self.show_tops)
         self.draw()
 
+    def clear_plots(self):
+        self.figure.clear()  # clear the figure
+        self.figure.clf()
+
     def plot_horizontal_well(self, horz_path):
         """
         This function creates a horizontal well overlay on top of the previous well logs.
@@ -172,7 +178,7 @@ class WellLogPlotter(FigureCanvas):
         horz_df = horz_loader(horz_path)
 
         # create an overlay axis, will have to fix width and height
-        self.horz_well_axes = self.fig.add_axes((0.125, 0.109, 0.774, 0.77), sharey=self.axes[0])  # l b width height
+        self.horz_well_axes = self.fig.add_axes((0.125, 0.109, 0.774,  0.77), sharey=self.axes[0])  # l b width height
         self.horz_well_axes.set_navigate(False)
 
         # make transparent background
@@ -202,21 +208,25 @@ class WellLogPlotter(FigureCanvas):
         self.horz_well_axes.axhline(0, 0, 1, color='#3a506b', lw=1.5, ls='--', alpha=0.6,
                                     label='Sea Level')
 
+        self.horz_well_axes.plot(
+                horz_df['EW'], horz_df['SS'],  # x, y
+                color='#371D10', label='Horizontal Well')
+
         for i in range(1, len(horz_df['SS'].values)):
             if horz_df['SS'].values[i-1] - horz_df['SS'].values[i] <= 0.8:
                 constant = horz_df['SS'].values[i]
                 self.horz_well_axes.axhline(constant, 0, 1, color='#4A3728', lw=1.5, ls='-', alpha=0.8,
                                             label='Constant')
-                # print(f'constant: {constant}')
+                self.horz_well_axes.plot(horz_df['EW'].values[i], constant, marker='*',
+                                         color='orange', markeredgecolor='red',
+                                         markersize=10)
+                print(f'constant value: {constant}')
                 break
 
-        self.horz_well_axes.plot(
-                horz_df['EW'], horz_df['SS'],  # x, y
-                color='#371D10', label='Horizontal Well')
 
         self.horz_well_axes.legend(loc='upper right', fontsize=7)
 
-        print('re-drawing well...')
+        print('re-drawing well [finished horizontal_well()]...')
         self.draw()
 
 
@@ -228,7 +238,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("LogiZontal")
         self.setGeometry(100, 100, 800, 1100)  # width, height
 
-        print('adding file button to menu...')
+        print('adding file button(s) to menu...')
         # for the file menu
         file_menu = self.menuBar().addMenu('Files')
         open_file = QAction('Open LAS file', self)
@@ -272,6 +282,11 @@ class MainWindow(QMainWindow):
             }
         """)
 
+        # to reset the graphs
+        self.reset_button = QPushButton('Reset Graphs')
+        self.reset_button.clicked.connect(self.reset_graphs)
+        self.toolbar.addWidget(self.reset_button)
+
         # add it to the toolbar
         self.toolbar.addWidget(self.toggle_button)
 
@@ -305,6 +320,10 @@ class MainWindow(QMainWindow):
                 print(f'plotted csv file: {csv_file}')
 
             self.well_plot.draw()
+
+    def reset_graphs(self):
+        self.well_plot.clear_plots()
+        self.well_plot.draw()
 
 
 def main():
