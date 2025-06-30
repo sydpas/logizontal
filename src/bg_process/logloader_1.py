@@ -32,10 +32,8 @@ def logsection(file_path):
 
     loc = las.well.LOC.value if 'LOC' in las.well else None
     comp = las.well.COMP.value if 'COMP' in las.well else None
-    kb = las.params['EREF'].value if 'EREF' in las.params else None
-    if kb is None:
-        kb = 824.1
-        print(f'kb: {kb}')
+    kb = las.params['EREF'].value if 'EREF' in las.params else 824.1
+    print(f'kb: {kb}')
 
     # depth to ss
     df['SUBSEA'] = kb - df['DEPTH']

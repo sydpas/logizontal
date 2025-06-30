@@ -1,4 +1,3 @@
-import pandas as pd
 from bg_process.logloader_1 import (logsection)
 
 
@@ -9,35 +8,36 @@ def top_load(file_path):
     Return:
         well_tops_list: list of all well tops from an LAS file.
     """
+    tops_begin = False
+    tops = {}
+
+    with open(file_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+
+            if line.startswith('~TOPS_Data'):
+                tops_begin = True
+                continue  # to skip the header line
+
+            if tops_begin:
+                if line == '' or line.startswith('~'):
+                    break  # to end the tops section
+
+                sec = line.split()
+                if len(sec) >= 2:  # to join name sections
+                    try:
+                        depth = float(sec[-1])
+                        name = ' '.join(sec[:-1])
+                        tops[name] = depth
+                    except ValueError:
+                        continue
+
+    # convert to ss using kb
     _, _, _, _, _, _, kb = logsection(file_path)
+    tops_subsea = {name: kb - depth for name, depth in tops.items()}
+    print(f'subsea tops: {tops_subsea}')
 
-    well_tops = pd.read_csv(file_path)
+    return [tops_subsea]
 
-    # print(well_tops.head())
-
-    well_tops_list = []
-    for _, row in well_tops.iterrows():
-        tops = {}  # creating a dictionary
-        for column in well_tops.columns:
-            if column == 'UWI':
-                continue  # skip non-depth columns
-
-            val = row[column]  # get depth value from current row and column
-            print(f'val: {val}')
-            if pd.notna(val):
-                # convert depth to subsea by subtracting kb
-                if kb is not None:
-                    print(f'kb: {kb}')
-                    ss_val = kb - val
-                    print(f'ss_val: {ss_val}')
-                else:
-                    ss_val = 824.1 - val
-                tops[column] = ss_val  # save ss in tops dict w column name as key
-
-        well_tops_list.append(tops)
-
-    # print(f'well tops list: {well_tops_list}')
-
-    return well_tops_list
 
 

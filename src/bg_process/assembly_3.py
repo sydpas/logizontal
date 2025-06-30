@@ -39,6 +39,7 @@ def organize_curves(file_path):
         ax_list.append(group)
         col_list.append(len(group))
 
-    print(f'ax_list: {ax_list}')
-    print(f'col_list: {col_list}')
+    # print(f'ax_list: {ax_list}')
+    # print(f'col_list: {col_list}')
+
     return ax_list, col_list
