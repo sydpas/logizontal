@@ -1,6 +1,5 @@
 import pandas as pd
 from bg_process.logloader_1 import (logsection)
-import os
 
 
 
@@ -13,9 +12,7 @@ def top_load(file_path):
     """
     _, _, _, _, _, _, kb = logsection(file_path)
 
-    current_dir = os.path.dirname(__file__)
-    csv_path = os.path.abspath(os.path.join(current_dir, "../../csv_files/1506tops.csv"))
-    well_tops = pd.read_csv(csv_path)
+    well_tops = pd.read_csv(file_path)
 
     # print(well_tops.head())
 
@@ -27,9 +24,15 @@ def top_load(file_path):
                 continue  # skip non-depth columns
 
             val = row[column]  # get depth value from current row and column
+            print(f'val: {val}')
             if pd.notna(val):
-                # Convert depth to subsea by subtracting kb
-                ss_val = kb - val
+                # convert depth to subsea by subtracting kb
+                if kb is not None:
+                    print(f'kb: {kb}')
+                    ss_val = kb - val
+                    print(f'ss_val: {ss_val}')
+                else:
+                    ss_val = 824.1 - val
                 tops[column] = ss_val  # save ss in tops dict w column name as key
 
         well_tops_list.append(tops)

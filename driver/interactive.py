@@ -15,7 +15,7 @@ from matplotlib.backends.backend_qtagg import (
     )
 
 from PySide6.QtWidgets import (
-    QMainWindow, QVBoxLayout, QWidget, QApplication, QToolButton, QFileDialog
+    QMainWindow, QVBoxLayout, QWidget, QApplication, QToolButton, QFileDialog, QInputDialog
 )
 
 
@@ -90,8 +90,9 @@ class WellLogPlotter(FigureCanvas):
                     line = ax.axhline(y=y, color='red', lw=1, ls='-')  # tops
                     self.tops_lines_list.append(line) # add lines to the list
                     if i == 0:
-                        top_name = ax.text(x=0, y=y - 5, s=horz, color='red', fontsize=5, ha='right', va='center')
+                        top_name = ax.text(x=0, y=y, s=horz, color='red', fontsize=5, ha='right', va='center')
                         self.tops_lines_list.append(top_name)  # add top names to the list
+                        ax.set_ylabel('KB - MD (m)', color='black', labelpad=10, size=8)
 
             ax2 = ax.twiny()
             # unit labels
@@ -103,44 +104,43 @@ class WellLogPlotter(FigureCanvas):
             ax.tick_params(axis='y', which='both', left=True, right=False, labelleft=True, labelright=False,
                            labelsize=8)
             ax2.tick_params(axis='y', which='both', left=False, right=False, labelleft=False, labelright=False)
-            ax.set_ylabel('Subsea (m)', color='black', labelpad=10, size=8)
 
-            for j, curve in enumerate(curves):
-                unit = curve_unit_list.get(curve, '')
-                print(f'Plotting curve: {curve}...')
-                print(f'The unit for {curve} is {unit}')
 
-                if curve == 'GR':
-                    df.plot(
-                        x=curve, y='SUBSEA', color='black', ax=ax,
-                        linewidth=0.5, marker='o', markersize=0.1, alpha=0.4, label='GR')
-                    ax.fill_betweenx(df['SUBSEA'], df[curve], 75, facecolor='#ffc300', alpha=0.5)
-                    ax.fill_betweenx(df['SUBSEA'], df[curve], 0, facecolor='white')
+            for j, (curve_name, curve_series) in enumerate(curves):
+                unit = curve_unit_list.get(curve_name, '')
+                print(f'Plotting curve: {curve_name}...')
+                print(f'The unit for {curve_name} is {unit}')
+
+                if curve_name == 'GR':
+                    ax.plot(
+                        curve_series, df['SUBSEA'], color='black',
+                        linewidth=0.5, marker='o', markersize=0.1, alpha=0.4, label='GR'
+                    )
+                    ax.fill_betweenx(df['SUBSEA'], curve_series, 75, facecolor='#ffc300', alpha=0.5)
+                    ax.fill_betweenx(df['SUBSEA'], curve_series, 0, facecolor='white')
                     ax.axvline(75, color='black', linewidth=0.5, alpha=0.5)
-
                 else:
                     shade = shade_list[curve_counter % len(shade_list)]
                     curve_counter += 1
-                    # print(f'Shade for {curve}: {shade}')
 
                     next_ax = ax2 if j != 0 and ax2 else ax
-                    df.plot(
-                        x=curve, y='SUBSEA', color=shade, ax=next_ax,
-                        linewidth=0.5, marker='o', markersize=0.1, alpha=0.4, label=curve)
+                    next_ax.plot(
+                        curve_series, df['SUBSEA'], color=shade,
+                        linewidth=0.5, marker='o', markersize=0.1, alpha=0.4, label=curve_name
+                    )
 
                 if j != 0:
-                    ax2.set_xlabel(f'{curve} ({unit})', fontsize=5, labelpad=4, fontstyle='italic')
-
+                    ax2.set_xlabel(f'{curve_name} ({unit})', fontsize=5, labelpad=4, fontstyle='italic')
                 else:
-                    ax.set_xlabel(f'{curve} ({unit})', fontsize=5, labelpad=4, fontstyle='italic')
+                    ax.set_xlabel(f'{curve_name} ({unit})', fontsize=5, labelpad=4, fontstyle='italic')
 
             # adjusting proper y limits
             ax.set_ylim(df['SUBSEA'].min(), df['SUBSEA'].max())
 
             # ... and x limits
-            ax.set_xlim(df[curves[0]].min(), df[curves[0]].max())
+            ax.set_xlim(curves[0][1].min(), curves[0][1].max())
             if ax2:
-                ax2.set_xlim(df[curves[-1]].min(), df[curves[-1]].max())
+                ax2.set_xlim(curves[-1][1].min(), curves[-1][1].max())
 
             # combining the legends and putting bottom left
             if ax2:
@@ -149,7 +149,7 @@ class WellLogPlotter(FigureCanvas):
                 ax.legend(lines_1 + lines_2, labels_1 + labels_2, loc='lower left', fontsize=6)
                 ax2.get_legend().remove() if ax2.get_legend() else None
 
-            ax.set_title(' and '.join(curves), fontsize=12, pad=8)
+            ax.set_title(' and '.join([name for name, _ in curves]), fontsize=12, pad=8)
 
             ax.minorticks_on()
             ax.tick_params(axis='y', which='minor', labelsize=0)  # hide minor tick labels
@@ -193,7 +193,7 @@ class WellLogPlotter(FigureCanvas):
 
         # y axis ticks
         self.horz_well_axes.yaxis.set_ticks_position('right')
-        self.horz_well_axes.tick_params(axis='y', labelsize=8, colors='darkblue', length=3)
+        self.horz_well_axes.tick_params(axis='y', labelsize=8, colors='darkblue', length=3, labelright=True)
 
         xmin, xmax = horz_df['EW'].min(), horz_df['EW'].max()
         self.horz_well_axes.set_xlim(xmin, xmax)
