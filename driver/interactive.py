@@ -84,7 +84,7 @@ class WellLogPlotter(FigureCanvas):
             ax = self.axes[i]
             top = well_tops_list[0]
 
-            print(f'Plotting curve(s): {curves}...')
+            # print(f'Plotting curve(s): {curves}...')
 
             for horz, depth in top.items():
                 if pd.notna(depth):
@@ -285,9 +285,27 @@ class MainWindow(QMainWindow):
         # to reset the graphs
         self.reset_button = QPushButton('Reset Graphs')
         self.reset_button.clicked.connect(self.reset_graphs)
-        self.toolbar.addWidget(self.reset_button)
+        self.reset_button.setStyleSheet("""
+            QPushButton {
+                background-color: #7b2cbf;
+                border: 1px solid #c77dff;
+                border-radius: 4px;
+                padding: 4px;
+                font-weight: bold;
+                color: white;
+            }
+            QPushButton:checked {
+                background-color: #7b2cbf;
+                border: 1px solid #c77dff;
+            }
+            QPushButton:hover {
+                background-color: #c77dff;
+                border: 1px solid #7b2cbf;
+            }
+        """)
 
-        # add it to the toolbar
+        # adding buttons
+        self.toolbar.addWidget(self.reset_button)
         self.toolbar.addWidget(self.toggle_button)
 
         layout.addWidget(self.well_plot)

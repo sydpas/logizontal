@@ -32,6 +32,11 @@ def horz_loader(horz_path):
 
     df['SS'] = kb - df['TVD']
 
+    print(f'first subsea: {df['SS'][0]} = {kb} - {df['TVD'][0]}')
+    print(f'second subsea: {df['SS'][1]} = {kb} - {df['TVD'][1]}')
+    print(f'third subsea: {df['SS'][2]} = {kb} - {df['TVD'][2]}')
+    print(f'fourth subsea: {df['SS'][3]} = {kb} - {df['TVD'][3]}')
+
     print(f'new df header with subsea: {df.head()}')
 
     return df
