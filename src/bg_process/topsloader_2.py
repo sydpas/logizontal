@@ -2,13 +2,12 @@ import pandas as pd
 from bg_process.logloader_1 import (logsection)
 
 
-
 def top_load(file_path):
     """
-    This function reads a CSV file and creates a list of all the well tops.
+    This function reads an LAS file and creates a list of all the well tops.
 
     Return:
-        well_tops_list: list of all well tops from a CSV file.
+        well_tops_list: list of all well tops from an LAS file.
     """
     _, _, _, _, _, _, kb = logsection(file_path)
 
